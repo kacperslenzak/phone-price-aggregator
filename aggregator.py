@@ -21,4 +21,4 @@ class Aggregator:
                         self.phone_offers.append(offer)
                     self.logger.info(f"[{provider.name}]: appended {model}")
                 except Exception as e:
-                    self.logger.exception(f"[{provider.name}]: failed to fetch {model}")
+                    self.logger.exception(f"[{provider.name}]: failed to fetch {model} -> {e}")

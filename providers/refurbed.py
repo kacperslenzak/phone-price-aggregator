@@ -1,12 +1,10 @@
 import logging
-
 from models.enums import Condition
 from providers import BaseProvider
 from bs4 import BeautifulSoup
 import re
 from playwright.sync_api import sync_playwright
 from models import PhoneOffer
-from time import sleep
 
 
 def extract_storage(tag: BeautifulSoup):
@@ -17,7 +15,7 @@ def extract_storage(tag: BeautifulSoup):
 
 
 def extract_price_and_currency(tag: BeautifulSoup):
-    text = tag.get_text(strip=True)
+    text = tag.get_text(" ", strip=True)
 
     currency = "EUR" if "€" in text else "Unknown"
 
@@ -27,7 +25,7 @@ def extract_price_and_currency(tag: BeautifulSoup):
     return price, currency
 
 
-def extract_condition(tag: BeautifulSoup ):
+def extract_condition(tag: BeautifulSoup):
     text = tag.get_text(" ", strip=True).lower()
     if "excellent" in text:
         return Condition("B")
@@ -111,8 +109,3 @@ class RefurbedProvider(BaseProvider):
             source="Refurbed",
             url=self.current_url
         )
-
-
-if __name__ == '__main__':
-    provider = RefurbedProvider()
-    listings = provider.fetch_listings()

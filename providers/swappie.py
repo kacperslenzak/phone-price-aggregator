@@ -5,7 +5,6 @@ from providers import BaseProvider
 from models import PhoneOffer
 import requests
 from typing import List
-from time import sleep
 
 
 def parse_model_name_to_slug(model_name):
@@ -74,8 +73,3 @@ class SwappieProvider(BaseProvider):
             source="Swappie",
             url=f"https://swappie.com/ie/iphone/{parse_model_name_to_slug(phone_offer['modelName'])}/{phone_offer['slug']}"
         )
-
-
-if __name__ == '__main__':
-    provider = SwappieProvider()
-    provider.fetch_listings()
