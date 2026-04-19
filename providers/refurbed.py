@@ -9,14 +9,14 @@ from models import PhoneOffer
 from time import sleep
 
 
-def extract_storage(tag):
+def extract_storage(tag: BeautifulSoup):
     text = tag.get_text(" ", strip=True)
 
     match = re.search(r"(\d+)\s?GB", text, re.I)
     return int(match.group(1)) if match else None
 
 
-def extract_price_and_currency(tag):
+def extract_price_and_currency(tag: BeautifulSoup):
     text = tag.get_text(strip=True)
 
     currency = "EUR" if "€" in text else "Unknown"
@@ -27,7 +27,7 @@ def extract_price_and_currency(tag):
     return price, currency
 
 
-def extract_condition(tag):
+def extract_condition(tag: BeautifulSoup ):
     text = tag.get_text(" ", strip=True).lower()
     if "excellent" in text:
         return Condition("B")
@@ -36,7 +36,7 @@ def extract_condition(tag):
     elif "premium" in text:
         return Condition("A")
 
-    return None
+    return Condition("C")
 
 
 class RefurbedProvider(BaseProvider):
@@ -89,15 +89,10 @@ class RefurbedProvider(BaseProvider):
         page.close()
         return BeautifulSoup(html, "html.parser")
 
-    def fetch_listings(self) -> list[PhoneOffer]:
-        phone_offers: list[PhoneOffer] = []
-        for model in self.AVAILABLE_MODELS:
-            self.current_url = self.BASE_URL + model
-            soup = self.get_html_content(self.current_url)
-            phone_offers.append(self.normalize(soup))
-            sleep(2)
-
-        return phone_offers
+    def fetch_listings(self, model):
+        self.current_url = self.BASE_URL + model
+        soup = self.get_html_content(self.current_url)
+        return self.normalize(soup)
 
     def normalize(self, phone_offer: BeautifulSoup) -> PhoneOffer:
         details = phone_offer.find(attrs={'data-test': 'product-basic-details'})

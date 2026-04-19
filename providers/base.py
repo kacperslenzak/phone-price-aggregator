@@ -5,7 +5,7 @@ class BaseProvider(ABC):
     name = "base"
 
     @abstractmethod
-    def fetch_listings(self):
+    def fetch_listings(self, model):
         """Return listings"""
         pass
 

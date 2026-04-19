@@ -1,13 +1,20 @@
 import logging
+import re
 from models.enums import Condition
 from providers import BaseProvider
 from models import PhoneOffer
 import requests
 from typing import List
+from time import sleep
 
 
 def parse_model_name_to_slug(model_name):
     return model_name.lower().replace(" ", "-")
+
+
+def clean_price(raw: str):
+    cleaned = re.sub(r"[^\d.]", "", raw)
+    return float(cleaned)
 
 
 class SwappieProvider(BaseProvider):
@@ -48,12 +55,13 @@ class SwappieProvider(BaseProvider):
     ]
     logger = logging.getLogger('providers.swappie')
 
-    def fetch_listings(self):
+    def fetch_listings(self, model):
         phone_offers: List[PhoneOffer] = []
-        for model in self.AVAILABLE_MODELS:
-            phone_api_request = requests.get(self.BASE_URL + model).json()
-            for phone in phone_api_request['availablePhones']:
-                phone_offers.append(self.normalize(phone))
+        phone_api_request = requests.get(self.BASE_URL + model).json()
+        for phone in phone_api_request['availablePhones']:
+            phone_offers.append(self.normalize(phone))
+
+        return phone_offers
 
     def normalize(self, phone_offer: dict):
         return PhoneOffer(
@@ -61,7 +69,7 @@ class SwappieProvider(BaseProvider):
             model=phone_offer['modelName'],
             storage=phone_offer['storage'],
             condition=Condition(phone_offer['grade']),
-            price=float(phone_offer['price'].replace("€", "")),
+            price=float(clean_price(phone_offer['price'])),
             currency=phone_offer['normalPrice']['currency'],
             source="Swappie",
             url=f"https://swappie.com/ie/iphone/{parse_model_name_to_slug(phone_offer['modelName'])}/{phone_offer['slug']}"
