@@ -5,6 +5,7 @@ from models.enums import Condition
 
 @dataclass
 class PhoneOffer:
+    id: str
     brand: str
     model: str
     storage: int

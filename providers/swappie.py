@@ -6,6 +6,8 @@ from models import PhoneOffer
 import requests
 from typing import List
 
+from utils import generate_id
+
 
 def parse_model_name_to_slug(model_name):
     return model_name.lower().replace(" ", "-")
@@ -63,7 +65,9 @@ class SwappieProvider(BaseProvider):
         return phone_offers
 
     def normalize(self, phone_offer: dict):
+        url = f"https://swappie.com/ie/iphone/{parse_model_name_to_slug(phone_offer['modelName'])}/{phone_offer['slug']}"
         return PhoneOffer(
+            id=generate_id("Swappie", url),
             brand="Apple",
             model=phone_offer['modelName'],
             storage=phone_offer['storage'],
@@ -71,5 +75,5 @@ class SwappieProvider(BaseProvider):
             price=float(clean_price(phone_offer['price'])),
             currency=phone_offer['normalPrice']['currency'],
             source="Swappie",
-            url=f"https://swappie.com/ie/iphone/{parse_model_name_to_slug(phone_offer['modelName'])}/{phone_offer['slug']}"
+            url=url
         )

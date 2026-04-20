@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import re
 from playwright.sync_api import sync_playwright
 from models import PhoneOffer
+from utils import generate_id
 
 
 def extract_storage(tag: BeautifulSoup):
@@ -100,6 +101,7 @@ class RefurbedProvider(BaseProvider):
         condition = extract_condition(details)
 
         return PhoneOffer(
+            id=generate_id("Refurbed", self.current_url),
             brand="Apple",
             model=model,
             storage=storage,
