@@ -12,6 +12,7 @@ class Aggregator:
     def run_aggregator(self):
         for provider in self.providers:
             for model in provider.AVAILABLE_MODELS:
+                count = 0
                 try:
                     self.logger.info(f"[{provider.name}]: fetching {model}")
                     offer = provider.fetch_listings(model)
@@ -19,6 +20,7 @@ class Aggregator:
                         self.phone_offers.extend(offer)
                     else:
                         self.phone_offers.append(offer)
-                    self.logger.info(f"[{provider.name}]: appended {model}")
+                    count += 1
+                    self.logger.info(f"[{provider.name}] -> [iteration: {count}]: appended {model}")
                 except Exception as e:
                     self.logger.exception(f"[{provider.name}]: failed to fetch {model} -> {e}")

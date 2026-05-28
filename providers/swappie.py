@@ -13,9 +13,8 @@ def parse_model_name_to_slug(model_name):
     return model_name.lower().replace(" ", "-")
 
 
-def clean_price(raw: str):
-    cleaned = re.sub(r"[^\d.]", "", raw)
-    return float(cleaned)
+def clean_price(raw: int, precision: int) -> float:
+    return raw / (10 ** precision)
 
 
 class SwappieProvider(BaseProvider):
@@ -72,7 +71,7 @@ class SwappieProvider(BaseProvider):
             model=phone_offer['modelName'],
             storage=phone_offer['storage'],
             condition=Condition(phone_offer['grade']),
-            price=float(clean_price(phone_offer['price'])),
+            price=float(clean_price(phone_offer['normalPrice']['amount'], phone_offer['normalPrice']['precision'])),
             currency=phone_offer['normalPrice']['currency'],
             source="Swappie",
             url=url
