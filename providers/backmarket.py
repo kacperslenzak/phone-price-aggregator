@@ -9,15 +9,6 @@ from providers import BaseProvider
 from utils import generate_id
 
 
-def extract_storage(text: str) -> Optional[int]:
-    match = re.search(r"(\d+)\s?GB", text, re.I)
-    return int(match.group(1)) if match else None
-
-
-def model_name_to_slug(name: str) -> str:
-    return name.lower().replace(" ", "-")
-
-
 class BackMarketProvider(BaseProvider):
     name = "backmarket"
     BASE_URL = "https://www.backmarket.ie/en-ie/p/"
@@ -56,13 +47,20 @@ class BackMarketProvider(BaseProvider):
     ]
     logger = logging.getLogger("providers.backmarket")
 
-    def __init__(self):
-        self.playwright = sync_playwright().start()
-        self.browser = self.playwright.chromium.launch(
-            args=["--no-sandbox", "--disable-blink-features=AutomationControlled"]
-        )
+    def _ensure_browser(self):
+        if not hasattr(self, "_playwright"):
+            self._playwright = sync_playwright().start()
+            self._browser = self._playwright.chromium.launch(
+                args=["--no-sandbox", "--disable-blink-features=AutomationControlled"]
+            )
+
+    @property
+    def browser(self):
+        self._ensure_browser()
+        return self._browser
 
     def get_page_data(self, url: str) -> Optional[dict]:
+        self._ensure_browser()
         context = self.browser.new_context(
             user_agent=(
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
