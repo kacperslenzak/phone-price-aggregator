@@ -1,8 +1,9 @@
+import concurrent.futures
 import logging
 import re
+import threading
 from typing import List, Optional
-from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
+
 from models import PhoneOffer
 from models.enums import Condition
 from providers import BaseProvider
@@ -47,34 +48,45 @@ class BackMarketProvider(BaseProvider):
     ]
     logger = logging.getLogger("providers.backmarket")
 
+    def __init__(self):
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        self._initialized = threading.Event()
+        self._playwright = None
+        self._browser = None
+
+    def _run_in_thread(self, fn, *args):
+        return self._executor.submit(fn, *args).result()
+
+    def _start_browser(self):
+        from playwright.sync_api import sync_playwright
+
+        self._playwright = sync_playwright().start()
+        self._browser = self._playwright.chromium.launch(
+            args=["--no-sandbox", "--disable-blink-features=AutomationControlled"]
+        )
+        self._initialized.set()
+
     def _ensure_browser(self):
-        if not hasattr(self, "_playwright"):
-            self._playwright = sync_playwright().start()
-            self._browser = self._playwright.chromium.launch(
-                args=["--no-sandbox", "--disable-blink-features=AutomationControlled"]
-            )
+        if not self._initialized.is_set():
+            self._run_in_thread(self._start_browser)
 
-    @property
-    def browser(self):
-        self._ensure_browser()
-        return self._browser
-
-    def get_page_data(self, url: str) -> Optional[dict]:
-        self._ensure_browser()
-        context = self.browser.new_context(
-            user_agent=(
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/125.0.0.0 Safari/537.36"
-            ),
-            viewport={"width": 1920, "height": 1080},
-            locale="en-IE",
-        )
-        page = context.new_page()
-        page.add_init_script(
-            'Object.defineProperty(navigator, "webdriver", {get: () => undefined});'
-        )
+    def _fetch_page(self, url: str) -> Optional[dict]:
+        if not self._initialized.is_set():
+            self._start_browser()
         try:
+            context = self._browser.new_context(
+                user_agent=(
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/125.0.0.0 Safari/537.36"
+                ),
+                viewport={"width": 1920, "height": 1080},
+                locale="en-IE",
+            )
+            page = context.new_page()
+            page.add_init_script(
+                'Object.defineProperty(navigator, "webdriver", {get: () => undefined});'
+            )
             page.goto(url, wait_until="domcontentloaded", timeout=30000)
             body_text = page.evaluate("document.body.innerText")
             title = page.title()
@@ -83,18 +95,25 @@ class BackMarketProvider(BaseProvider):
             return {"title": title, "body_text": body_text}
         except Exception as e:
             self.logger.warning("Failed to load %s: %s", url, e)
-            page.close()
-            context.close()
             return None
+
+    def get_page_data(self, url: str) -> Optional[dict]:
+        return self._run_in_thread(self._fetch_page, url)
+
+    def normalize(self, data: dict) -> List[PhoneOffer]:
+        if isinstance(data, dict) and "url" in data:
+            return self._normalize(data, data["url"])
+        return []
 
     def fetch_listings(self, model):
         url = self.BASE_URL + model
         data = self.get_page_data(url)
         if data is None:
             return []
-        return self.normalize(data, url)
+        data["url"] = url
+        return self._normalize(data, url)
 
-    def normalize(self, data: dict, url: str) -> List[PhoneOffer]:
+    def _normalize(self, data: dict, url: str) -> List[PhoneOffer]:
         offers = []
         body_text = data["body_text"]
         title = data["title"]
